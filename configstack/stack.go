@@ -3,13 +3,15 @@ package configstack
 import (
 	"bytes"
 	"fmt"
+	"io/ioutil"
+	"path"
+	"sort"
 	"strings"
 
 	"github.com/gruntwork-io/terragrunt/config"
 	"github.com/gruntwork-io/terragrunt/errors"
 	"github.com/gruntwork-io/terragrunt/options"
 	"github.com/gruntwork-io/terragrunt/util"
-	"sort"
 )
 
 // Represents a stack of Terraform modules (i.e. folders with Terraform templates) that you can "spin up" or
@@ -31,21 +33,22 @@ func (stack *Stack) String() string {
 
 // Plan execute plan in the given stack in their specified order.
 func (stack *Stack) Plan(terragruntOptions *options.TerragruntOptions) error {
-	stack.setTerraformCommand([]string{"plan"})
+	command := []string{"plan"}
+	stack.setTerraformCommand(command)
 
 	// We capture the out stream for each module
 	errorStreams := make([]bytes.Buffer, len(stack.Modules))
 	for n, module := range stack.Modules {
 		module.TerragruntOptions.ErrWriter = &errorStreams[n]
 	}
-	defer stack.summarizePlanAllErrors(terragruntOptions, errorStreams)
+	defer stack.summarizeAllErrors(command, terragruntOptions, errorStreams)
 	return RunModules(stack.Modules)
 }
 
-// We inspect the error streams to give an explicit message if the plan failed because there were references to
+// We inspect the error streams to give an explicit message if the plan/state (pull/push) failed because there were references to
 // remote states. `terraform plan` will fail if it tries to access remote state from dependencies and the plan
 // has never been applied on the dependency.
-func (stack *Stack) summarizePlanAllErrors(terragruntOptions *options.TerragruntOptions, errorStreams []bytes.Buffer) {
+func (stack *Stack) summarizeAllErrors(command []string, terragruntOptions *options.TerragruntOptions, errorStreams []bytes.Buffer) {
 	for i, errorStream := range errorStreams {
 		output := errorStream.String()
 		if strings.Contains(output, "Error running plan:") {
@@ -62,7 +65,7 @@ func (stack *Stack) summarizePlanAllErrors(terragruntOptions *options.Terragrunt
 				)
 			}
 		} else if errorStream.Len() > 0 {
-			terragruntOptions.Logger.Printf("Error with plan: %s", output)
+			terragruntOptions.Logger.Printf("Error with \"%s\": %s", strings.Join(command[:], " "), output)
 		}
 	}
 }
@@ -92,6 +95,87 @@ func (stack *Stack) Validate(terragruntOptions *options.TerragruntOptions) error
 	stack.setTerraformCommand([]string{"validate"})
 	return RunModules(stack.Modules)
 }
+
+// StatePull pulls a statefile from the remote backend to the local tmp-rename.tfstate
+func (stack *Stack) StatePull(terragruntOptions *options.TerragruntOptions, filename string) error {
+	command := []string{"state", "pull"}
+	stack.setTerraformCommand(command)
+
+	// We capture the out stream for each module
+	errorStreams := make([]bytes.Buffer, len(stack.Modules))
+	outputStreams := make([]bytes.Buffer, len(stack.Modules))
+	for n, module := range stack.Modules {
+		module.TerragruntOptions.ErrWriter = &errorStreams[n]
+		module.TerragruntOptions.Writer = &outputStreams[n]
+	}
+
+	if err := RunModules(stack.Modules); err != nil {
+		defer stack.summarizeAllErrors(command, terragruntOptions, errorStreams)
+		return err
+	}
+
+	// loop over the modules and store the tfstate in the module dir
+	for n, module := range stack.Modules {
+		stateFile := path.Join(module.Path, filename)
+		if outputStreams[n].Len() < 1 {
+			continue
+		}
+		if err := ioutil.WriteFile(stateFile, outputStreams[n].Bytes(), 0644); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// StatePush pushed a statefile from the local tmp-rename.tfstate to the remote backend
+func (stack *Stack) StatePush(terragruntOptions *options.TerragruntOptions, filename string) error {
+
+	command := []string{"state", "push", filename}
+	stack.setTerraformCommand(command)
+
+	// We capture the out stream for each module
+	errorStreams := make([]bytes.Buffer, len(stack.Modules))
+	outputStreams := make([]bytes.Buffer, len(stack.Modules))
+	for n, module := range stack.Modules {
+		module.TerragruntOptions.ErrWriter = &errorStreams[n]
+		module.TerragruntOptions.Writer = &outputStreams[n]
+	}
+
+	if err := RunModules(stack.Modules); err != nil {
+		defer stack.summarizeAllErrors(command, terragruntOptions, errorStreams)
+		return err
+	}
+
+	return nil
+}
+
+// TODO: desc
+/**/
+func (stack *Stack) StateRm(terragruntOptions *options.TerragruntOptions) error {
+	command := []string{"state", "rm"}
+	stack.setTerraformCommand(command)
+
+	terragruntOptions.AutoInit = false
+	//pretty.Print(terragruntOptions)
+
+	// We capture the out stream for each module
+	errorStreams := make([]bytes.Buffer, len(stack.Modules))
+
+	for n, module := range stack.Modules {
+		module.TerragruntOptions.ErrWriter = &errorStreams[n]
+
+	}
+
+	if err := RunModules(stack.Modules); err != nil {
+		defer stack.summarizeAllErrors(command, terragruntOptions, errorStreams)
+		return err
+	}
+
+	return nil
+}
+
+/**/
 
 // Return an error if there is a dependency cycle in the modules of this stack.
 func (stack *Stack) CheckForCycles() error {

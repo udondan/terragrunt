@@ -8,14 +8,15 @@ import (
 	"regexp"
 	"strings"
 
+	"path/filepath"
+
 	"github.com/gruntwork-io/terragrunt/config"
 	"github.com/gruntwork-io/terragrunt/errors"
 	"github.com/gruntwork-io/terragrunt/options"
 	"github.com/gruntwork-io/terragrunt/util"
-	"github.com/hashicorp/go-getter"
+	getter "github.com/hashicorp/go-getter"
 	urlhelper "github.com/hashicorp/go-getter/helper/url"
-	"github.com/mattn/go-zglob"
-	"path/filepath"
+	zglob "github.com/mattn/go-zglob"
 )
 
 // This struct represents information about Terraform source code that needs to be downloaded
@@ -56,7 +57,7 @@ func downloadTerraformSource(source string, terragruntOptions *options.Terragrun
 	}
 
 	terragruntOptions.Logger.Printf("Copying files from %s into %s", terragruntOptions.WorkingDir, terraformSource.WorkingDir)
-	if err := util.CopyFolderContents(terragruntOptions.WorkingDir, terraformSource.WorkingDir); err != nil {
+	if err := util.CopyFolderContents(terragruntOptions.WorkingDir, terraformSource.WorkingDir, true); err != nil {
 		return err
 	}
 
@@ -344,7 +345,7 @@ func cleanupTerraformFiles(path string, terragruntOptions *options.TerragruntOpt
 }
 
 // There are two ways a user can tell Terragrunt that it needs to download Terraform configurations from a specific
-// URL: via a command-line option or via an entry in the Terragrunt configuratino. If the user used one of these, this
+// URL: via a command-line option or via an entry in the Terragrunt configuration. If the user used one of these, this
 // method returns the source URL or an empty string if there is no source url
 func getTerraformSourceUrl(terragruntOptions *options.TerragruntOptions, terragruntConfig *config.TerragruntConfig) string {
 	if terragruntOptions.Source != "" {

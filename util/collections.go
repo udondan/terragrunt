@@ -37,6 +37,14 @@ func RemoveElementFromList(list []string, element string) []string {
 	return out
 }
 
+// RemoveIndexFromList returns a slice with one element removed, identified by index
+func RemoveIndexFromList(list []string, index int) []string {
+	if len(list)-1 < index {
+		return list
+	}
+	return append(list[:index], list[index+1:]...)
+}
+
 // Returns a copy of the given list with all duplicates removed (keeping the first encountereds)
 func RemoveDuplicatesFromList(list []string) []string {
 	return removeDuplicatesFromList(list, false)

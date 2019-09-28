@@ -8,8 +8,9 @@ import (
 	"strings"
 
 	"fmt"
+
 	"github.com/gruntwork-io/terragrunt/errors"
-	"github.com/mattn/go-zglob"
+	zglob "github.com/mattn/go-zglob"
 )
 
 // Return true if the given file exists
@@ -139,24 +140,35 @@ func ReadFileAsString(path string) (string, error) {
 
 // Copy the files and folders within the source folder into the destination folder. Note that hidden files and folders
 // (those starting with a dot) will be skipped.
-func CopyFolderContents(source string, destination string) error {
+func CopyFolderContents(source string, destination string, skipHiddenFileOrFolder bool) error {
 	files, err := ioutil.ReadDir(source)
 	if err != nil {
 		return errors.WithStackTrace(err)
+	}
+
+	// create destination directory if non-existent
+	if _, err := os.Stat(destination); os.IsNotExist(err) {
+		stat, err := os.Stat(source)
+		if err != nil {
+			return errors.WithStackTrace(err)
+		}
+		if err = os.MkdirAll(destination, stat.Mode()); err != nil {
+			return errors.WithStackTrace(err)
+		}
 	}
 
 	for _, file := range files {
 		src := filepath.Join(source, file.Name())
 		dest := filepath.Join(destination, file.Name())
 
-		if PathContainsHiddenFileOrFolder(file.Name()) {
+		if skipHiddenFileOrFolder && PathContainsHiddenFileOrFolder(file.Name()) {
 			continue
 		} else if file.IsDir() {
 			if err := os.MkdirAll(dest, file.Mode()); err != nil {
 				return errors.WithStackTrace(err)
 			}
 
-			if err := CopyFolderContents(src, dest); err != nil {
+			if err := CopyFolderContents(src, dest, skipHiddenFileOrFolder); err != nil {
 				return err
 			}
 		} else {

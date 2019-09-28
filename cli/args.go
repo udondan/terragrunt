@@ -104,6 +104,13 @@ func parseTerragruntOptionsFromArgs(args []string, writer, errWriter io.Writer) 
 		return nil, err
 	}
 
+	// handle positional arguments. bad solution, should generally use flag parser, e.g. flaggy https://github.com/integrii/flaggy
+	switch args[0] {
+	case CMD_MV:
+		opts.MvDestination = util.SecondArg(args)
+		args = util.RemoveIndexFromList(args, 1)
+	}
+
 	opts.TerraformPath = filepath.ToSlash(terraformPath)
 	opts.AutoInit = !parseBooleanArg(args, OPT_TERRAGRUNT_NO_AUTO_INIT, os.Getenv("TERRAGRUNT_AUTO_INIT") == "false")
 	opts.AutoRetry = !parseBooleanArg(args, OPT_TERRAGRUNT_NO_AUTO_RETRY, os.Getenv("TERRAGRUNT_AUTO_RETRY") == "false")

@@ -10,7 +10,7 @@ import (
 
 	"github.com/gruntwork-io/terragrunt/errors"
 	"github.com/gruntwork-io/terragrunt/util"
-	"github.com/hashicorp/go-version"
+	version "github.com/hashicorp/go-version"
 )
 
 var TERRAFORM_COMMANDS_WITH_SUBCOMMAND = []string{
@@ -102,6 +102,9 @@ type TerragruntOptions struct {
 	// Unix-style glob of directories to include when running *-all commands
 	IncludeDirs []string
 
+	// Destination directory name for `terragrunt mv`
+	MvDestination string
+
 	// A command that can be used to run Terragrunt with the given options. This is useful for running Terragrunt
 	// multiple times (e.g. when spinning up a stack of Terraform modules). The actual command is normally defined
 	// in the cli package, which depends on almost all other packages, so we declare it here so that other
@@ -143,6 +146,7 @@ func NewTerragruntOptions(terragruntConfigPath string) (*TerragruntOptions, erro
 		RetryableErrors:            util.CloneStringList(RETRYABLE_ERRORS),
 		ExcludeDirs:                []string{},
 		IncludeDirs:                []string{},
+		MvDestination:              "",
 		RunTerragrunt: func(terragruntOptions *TerragruntOptions) error {
 			return errors.WithStackTrace(RunTerragruntCommandNotSet)
 		},
@@ -210,6 +214,7 @@ func (terragruntOptions *TerragruntOptions) Clone(terragruntConfigPath string) *
 		RetryableErrors:            util.CloneStringList(terragruntOptions.RetryableErrors),
 		ExcludeDirs:                terragruntOptions.ExcludeDirs,
 		IncludeDirs:                terragruntOptions.IncludeDirs,
+		MvDestination:              terragruntOptions.MvDestination,
 		RunTerragrunt:              terragruntOptions.RunTerragrunt,
 	}
 }

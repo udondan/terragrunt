@@ -17,8 +17,8 @@ import (
 	"github.com/gruntwork-io/terragrunt/remote"
 	"github.com/gruntwork-io/terragrunt/shell"
 	"github.com/gruntwork-io/terragrunt/util"
-	"github.com/hashicorp/go-version"
-	"github.com/mattn/go-zglob"
+	version "github.com/hashicorp/go-version"
+	zglob "github.com/mattn/go-zglob"
 	"github.com/urfave/cli"
 )
 
@@ -45,6 +45,7 @@ const CMD_APPLY_ALL = "apply-all"
 const CMD_DESTROY_ALL = "destroy-all"
 const CMD_OUTPUT_ALL = "output-all"
 const CMD_VALIDATE_ALL = "validate-all"
+const CMD_MV = "mv"
 
 const CMD_INIT = "init"
 const CMD_INIT_FROM_MODULE = "init-from-module"
@@ -55,7 +56,7 @@ const CMD_SPIN_UP = "spin-up"
 // CMD_TEAR_DOWN is deprecated.
 const CMD_TEAR_DOWN = "tear-down"
 
-var MULTI_MODULE_COMMANDS = []string{CMD_APPLY_ALL, CMD_DESTROY_ALL, CMD_OUTPUT_ALL, CMD_PLAN_ALL, CMD_VALIDATE_ALL}
+var MULTI_MODULE_COMMANDS = []string{CMD_APPLY_ALL, CMD_DESTROY_ALL, CMD_OUTPUT_ALL, CMD_PLAN_ALL, CMD_VALIDATE_ALL, CMD_MV}
 
 // DEPRECATED_COMMANDS is a map of deprecated commands to the commands that replace them.
 var DEPRECATED_COMMANDS = map[string]string{
@@ -105,6 +106,7 @@ COMMANDS:
    output-all           Display the outputs of a 'stack' by running 'terragrunt output' in each subfolder
    destroy-all          Destroy a 'stack' by running 'terragrunt destroy' in each subfolder
    validate-all         Validate 'stack' by running 'terragrunt validate' in each subfolder
+   mv                   Rename a local directory and the corresponding remote statefiles
    *                    Terragrunt forwards all other commands directly to Terraform
 
 GLOBAL OPTIONS:
@@ -646,6 +648,8 @@ func runMultiModuleCommand(command string, terragruntOptions *options.Terragrunt
 		return outputAll(terragruntOptions)
 	case CMD_VALIDATE_ALL:
 		return validateAll(terragruntOptions)
+	case CMD_MV:
+		return mvAll(terragruntOptions)
 	default:
 		return errors.WithStackTrace(UnrecognizedCommand(command))
 	}
@@ -751,6 +755,11 @@ func validateAll(terragruntOptions *options.TerragruntOptions) error {
 
 	terragruntOptions.Logger.Printf("%s", stack.String())
 	return stack.Validate(terragruntOptions)
+}
+
+// rename renames a local direcotry and the corresponding remote resources
+func mvAll(terragruntOptions *options.TerragruntOptions) error {
+	return configstack.MvAll(terragruntOptions)
 }
 
 // checkProtectedModule checks if module is protected via the "prevent_destroy" flag
