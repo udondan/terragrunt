@@ -2,6 +2,7 @@ package configstack
 
 import (
 	"fmt"
+	"github.com/stretchr/testify/require"
 	"os"
 	"testing"
 
@@ -30,7 +31,7 @@ func TestResolveTerraformModulesOneModuleNoDependencies(t *testing.T) {
 	moduleA := &TerraformModule{
 		Path:              canonical(t, "../test/fixture-modules/module-a"),
 		Dependencies:      []*TerraformModule{},
-		Config:            config.TerragruntConfig{Terraform: &config.TerraformConfig{Source: "test"}},
+		Config:            config.TerragruntConfig{Terraform: &config.TerraformConfig{Source: ptr("test")}, IsPartial: true},
 		TerragruntOptions: mockOptions.Clone(canonical(t, "../test/fixture-modules/module-a/"+config.DefaultTerragruntConfigPath)),
 	}
 
@@ -49,8 +50,8 @@ func TestResolveTerraformModulesOneModuleWithIncludesNoDependencies(t *testing.T
 		Path:         canonical(t, "../test/fixture-modules/module-b/module-b-child"),
 		Dependencies: []*TerraformModule{},
 		Config: config.TerragruntConfig{
-			RemoteState: state(t, "bucket", "module-b-child/terraform.tfstate"),
-			Terraform:   &config.TerraformConfig{Source: "..."},
+			Terraform: &config.TerraformConfig{Source: ptr("...")},
+			IsPartial: true,
 		},
 		TerragruntOptions: mockOptions.Clone(canonical(t, "../test/fixture-modules/module-b/module-b-child/"+config.DefaultTerragruntConfigPath)),
 	}
@@ -70,7 +71,8 @@ func TestResolveTerraformModulesTwoModulesWithDependencies(t *testing.T) {
 		Path:         canonical(t, "../test/fixture-modules/module-a"),
 		Dependencies: []*TerraformModule{},
 		Config: config.TerragruntConfig{
-			Terraform: &config.TerraformConfig{Source: "test"},
+			Terraform: &config.TerraformConfig{Source: ptr("test")},
+			IsPartial: true,
 		},
 		TerragruntOptions: mockOptions.Clone(canonical(t, "../test/fixture-modules/module-a/"+config.DefaultTerragruntConfigPath)),
 	}
@@ -80,7 +82,8 @@ func TestResolveTerraformModulesTwoModulesWithDependencies(t *testing.T) {
 		Dependencies: []*TerraformModule{moduleA},
 		Config: config.TerragruntConfig{
 			Dependencies: &config.ModuleDependencies{Paths: []string{"../module-a"}},
-			Terraform:    &config.TerraformConfig{Source: "temp"},
+			Terraform:    &config.TerraformConfig{Source: ptr("temp")},
+			IsPartial:    true,
 		},
 		TerragruntOptions: mockOptions.Clone(canonical(t, "../test/fixture-modules/module-c/"+config.DefaultTerragruntConfigPath)),
 	}
@@ -103,7 +106,8 @@ func TestResolveTerraformModulesTwoModulesWithDependenciesExcludedDirsWithDepend
 		Path:         canonical(t, "../test/fixture-modules/module-a"),
 		Dependencies: []*TerraformModule{},
 		Config: config.TerragruntConfig{
-			Terraform: &config.TerraformConfig{Source: "test"},
+			Terraform: &config.TerraformConfig{Source: ptr("test")},
+			IsPartial: true,
 		},
 		TerragruntOptions: opts.Clone(canonical(t, "../test/fixture-modules/module-a/"+config.DefaultTerragruntConfigPath)),
 	}
@@ -113,7 +117,8 @@ func TestResolveTerraformModulesTwoModulesWithDependenciesExcludedDirsWithDepend
 		Dependencies: []*TerraformModule{moduleA},
 		Config: config.TerragruntConfig{
 			Dependencies: &config.ModuleDependencies{Paths: []string{"../module-a"}},
-			Terraform:    &config.TerraformConfig{Source: "temp"},
+			Terraform:    &config.TerraformConfig{Source: ptr("temp")},
+			IsPartial:    true,
 		},
 		TerragruntOptions: opts.Clone(canonical(t, "../test/fixture-modules/module-c/"+config.DefaultTerragruntConfigPath)),
 	}
@@ -140,7 +145,8 @@ func TestResolveTerraformModulesTwoModulesWithDependenciesExcludedDirsWithNoDepe
 		Path:         canonical(t, "../test/fixture-modules/module-a"),
 		Dependencies: []*TerraformModule{},
 		Config: config.TerragruntConfig{
-			Terraform: &config.TerraformConfig{Source: "test"},
+			Terraform: &config.TerraformConfig{Source: ptr("test")},
+			IsPartial: true,
 		},
 		TerragruntOptions: opts.Clone(canonical(t, "../test/fixture-modules/module-a/"+config.DefaultTerragruntConfigPath)),
 	}
@@ -150,7 +156,8 @@ func TestResolveTerraformModulesTwoModulesWithDependenciesExcludedDirsWithNoDepe
 		Dependencies: []*TerraformModule{moduleA},
 		Config: config.TerragruntConfig{
 			Dependencies: &config.ModuleDependencies{Paths: []string{"../module-a"}},
-			Terraform:    &config.TerraformConfig{Source: "temp"},
+			Terraform:    &config.TerraformConfig{Source: ptr("temp")},
+			IsPartial:    true,
 		},
 		TerragruntOptions: opts.Clone(canonical(t, "../test/fixture-modules/module-c/"+config.DefaultTerragruntConfigPath)),
 	}
@@ -177,7 +184,8 @@ func TestResolveTerraformModulesTwoModulesWithDependenciesIncludedDirsWithDepend
 		Path:         canonical(t, "../test/fixture-modules/module-a"),
 		Dependencies: []*TerraformModule{},
 		Config: config.TerragruntConfig{
-			Terraform: &config.TerraformConfig{Source: "test"},
+			Terraform: &config.TerraformConfig{Source: ptr("test")},
+			IsPartial: true,
 		},
 		TerragruntOptions: opts.Clone(canonical(t, "../test/fixture-modules/module-a/"+config.DefaultTerragruntConfigPath)),
 	}
@@ -187,7 +195,8 @@ func TestResolveTerraformModulesTwoModulesWithDependenciesIncludedDirsWithDepend
 		Dependencies: []*TerraformModule{moduleA},
 		Config: config.TerragruntConfig{
 			Dependencies: &config.ModuleDependencies{Paths: []string{"../module-a"}},
-			Terraform:    &config.TerraformConfig{Source: "temp"},
+			Terraform:    &config.TerraformConfig{Source: ptr("temp")},
+			IsPartial:    true,
 		},
 		TerragruntOptions: opts.Clone(canonical(t, "../test/fixture-modules/module-c/"+config.DefaultTerragruntConfigPath)),
 	}
@@ -214,7 +223,8 @@ func TestResolveTerraformModulesTwoModulesWithDependenciesIncludedDirsWithNoDepe
 		Path:         canonical(t, "../test/fixture-modules/module-a"),
 		Dependencies: []*TerraformModule{},
 		Config: config.TerragruntConfig{
-			Terraform: &config.TerraformConfig{Source: "test"},
+			Terraform: &config.TerraformConfig{Source: ptr("test")},
+			IsPartial: true,
 		},
 		TerragruntOptions: opts.Clone(canonical(t, "../test/fixture-modules/module-a/"+config.DefaultTerragruntConfigPath)),
 	}
@@ -224,7 +234,8 @@ func TestResolveTerraformModulesTwoModulesWithDependenciesIncludedDirsWithNoDepe
 		Dependencies: []*TerraformModule{moduleA},
 		Config: config.TerragruntConfig{
 			Dependencies: &config.ModuleDependencies{Paths: []string{"../module-a"}},
-			Terraform:    &config.TerraformConfig{Source: "temp"},
+			Terraform:    &config.TerraformConfig{Source: ptr("temp")},
+			IsPartial:    true,
 		},
 		TerragruntOptions: opts.Clone(canonical(t, "../test/fixture-modules/module-c/"+config.DefaultTerragruntConfigPath)),
 	}
@@ -252,7 +263,8 @@ func TestResolveTerraformModulesTwoModulesWithDependenciesIncludedDirsWithDepend
 		Path:         canonical(t, "../test/fixture-modules/module-a"),
 		Dependencies: []*TerraformModule{},
 		Config: config.TerragruntConfig{
-			Terraform: &config.TerraformConfig{Source: "test"},
+			Terraform: &config.TerraformConfig{Source: ptr("test")},
+			IsPartial: true,
 		},
 		TerragruntOptions: opts.Clone(canonical(t, "../test/fixture-modules/module-a/"+config.DefaultTerragruntConfigPath)),
 	}
@@ -262,7 +274,8 @@ func TestResolveTerraformModulesTwoModulesWithDependenciesIncludedDirsWithDepend
 		Dependencies: []*TerraformModule{moduleA},
 		Config: config.TerragruntConfig{
 			Dependencies: &config.ModuleDependencies{Paths: []string{"../module-a"}},
-			Terraform:    &config.TerraformConfig{Source: "temp"},
+			Terraform:    &config.TerraformConfig{Source: ptr("temp")},
+			IsPartial:    true,
 		},
 		TerragruntOptions: opts.Clone(canonical(t, "../test/fixture-modules/module-c/"+config.DefaultTerragruntConfigPath)),
 	}
@@ -270,7 +283,7 @@ func TestResolveTerraformModulesTwoModulesWithDependenciesIncludedDirsWithDepend
 	moduleF := &TerraformModule{
 		Path:                 canonical(t, "../test/fixture-modules/module-f"),
 		Dependencies:         []*TerraformModule{},
-		Config:               config.TerragruntConfig{},
+		Config:               config.TerragruntConfig{IsPartial: true},
 		TerragruntOptions:    mockOptions.Clone(canonical(t, "../test/fixture-modules/module-f/"+config.DefaultTerragruntConfigPath)),
 		AssumeAlreadyApplied: false,
 	}
@@ -293,7 +306,7 @@ func TestResolveTerraformModulesMultipleModulesWithDependencies(t *testing.T) {
 	moduleA := &TerraformModule{
 		Path:              canonical(t, "../test/fixture-modules/module-a"),
 		Dependencies:      []*TerraformModule{},
-		Config:            config.TerragruntConfig{Terraform: &config.TerraformConfig{Source: "test"}},
+		Config:            config.TerragruntConfig{Terraform: &config.TerraformConfig{Source: ptr("test")}, IsPartial: true},
 		TerragruntOptions: mockOptions.Clone(canonical(t, "../test/fixture-modules/module-a/"+config.DefaultTerragruntConfigPath)),
 	}
 
@@ -301,8 +314,8 @@ func TestResolveTerraformModulesMultipleModulesWithDependencies(t *testing.T) {
 		Path:         canonical(t, "../test/fixture-modules/module-b/module-b-child"),
 		Dependencies: []*TerraformModule{},
 		Config: config.TerragruntConfig{
-			RemoteState: state(t, "bucket", "module-b-child/terraform.tfstate"),
-			Terraform:   &config.TerraformConfig{Source: "..."},
+			Terraform: &config.TerraformConfig{Source: ptr("...")},
+			IsPartial: true,
 		},
 		TerragruntOptions: mockOptions.Clone(canonical(t, "../test/fixture-modules/module-b/module-b-child/"+config.DefaultTerragruntConfigPath)),
 	}
@@ -312,7 +325,8 @@ func TestResolveTerraformModulesMultipleModulesWithDependencies(t *testing.T) {
 		Dependencies: []*TerraformModule{moduleA},
 		Config: config.TerragruntConfig{
 			Dependencies: &config.ModuleDependencies{Paths: []string{"../module-a"}},
-			Terraform:    &config.TerraformConfig{Source: "temp"},
+			Terraform:    &config.TerraformConfig{Source: ptr("temp")},
+			IsPartial:    true,
 		},
 		TerragruntOptions: mockOptions.Clone(canonical(t, "../test/fixture-modules/module-c/"+config.DefaultTerragruntConfigPath)),
 	}
@@ -322,6 +336,7 @@ func TestResolveTerraformModulesMultipleModulesWithDependencies(t *testing.T) {
 		Dependencies: []*TerraformModule{moduleA, moduleB, moduleC},
 		Config: config.TerragruntConfig{
 			Dependencies: &config.ModuleDependencies{Paths: []string{"../module-a", "../module-b/module-b-child", "../module-c"}},
+			IsPartial:    true,
 		},
 		TerragruntOptions: mockOptions.Clone(canonical(t, "../test/fixture-modules/module-d/"+config.DefaultTerragruntConfigPath)),
 	}
@@ -340,7 +355,7 @@ func TestResolveTerraformModulesMultipleModulesWithDependenciesWithIncludes(t *t
 	moduleA := &TerraformModule{
 		Path:              canonical(t, "../test/fixture-modules/module-a"),
 		Dependencies:      []*TerraformModule{},
-		Config:            config.TerragruntConfig{Terraform: &config.TerraformConfig{Source: "test"}},
+		Config:            config.TerragruntConfig{Terraform: &config.TerraformConfig{Source: ptr("test")}, IsPartial: true},
 		TerragruntOptions: mockOptions.Clone(canonical(t, "../test/fixture-modules/module-a/"+config.DefaultTerragruntConfigPath)),
 	}
 
@@ -348,8 +363,8 @@ func TestResolveTerraformModulesMultipleModulesWithDependenciesWithIncludes(t *t
 		Path:         canonical(t, "../test/fixture-modules/module-b/module-b-child"),
 		Dependencies: []*TerraformModule{},
 		Config: config.TerragruntConfig{
-			RemoteState: state(t, "bucket", "module-b-child/terraform.tfstate"),
-			Terraform:   &config.TerraformConfig{Source: "..."},
+			Terraform: &config.TerraformConfig{Source: ptr("...")},
+			IsPartial: true,
 		},
 		TerragruntOptions: mockOptions.Clone(canonical(t, "../test/fixture-modules/module-b/module-b-child/"+config.DefaultTerragruntConfigPath)),
 	}
@@ -358,9 +373,9 @@ func TestResolveTerraformModulesMultipleModulesWithDependenciesWithIncludes(t *t
 		Path:         canonical(t, "../test/fixture-modules/module-e/module-e-child"),
 		Dependencies: []*TerraformModule{moduleA, moduleB},
 		Config: config.TerragruntConfig{
-			RemoteState:  state(t, "bucket", "module-e-child/terraform.tfstate"),
 			Dependencies: &config.ModuleDependencies{Paths: []string{"../../module-a", "../../module-b/module-b-child"}},
-			Terraform:    &config.TerraformConfig{Source: "test"},
+			Terraform:    &config.TerraformConfig{Source: ptr("test")},
+			IsPartial:    true,
 		},
 		TerragruntOptions: mockOptions.Clone(canonical(t, "../test/fixture-modules/module-e/module-e-child/"+config.DefaultTerragruntConfigPath)),
 	}
@@ -379,9 +394,9 @@ func TestResolveTerraformModulesMultipleModulesWithExternalDependencies(t *testi
 	moduleF := &TerraformModule{
 		Path:                 canonical(t, "../test/fixture-modules/module-f"),
 		Dependencies:         []*TerraformModule{},
-		Config:               config.TerragruntConfig{},
+		Config:               config.TerragruntConfig{IsPartial: true},
 		TerragruntOptions:    mockOptions.Clone(canonical(t, "../test/fixture-modules/module-f/"+config.DefaultTerragruntConfigPath)),
-		AssumeAlreadyApplied: false,
+		AssumeAlreadyApplied: true,
 	}
 
 	moduleG := &TerraformModule{
@@ -389,7 +404,8 @@ func TestResolveTerraformModulesMultipleModulesWithExternalDependencies(t *testi
 		Dependencies: []*TerraformModule{moduleF},
 		Config: config.TerragruntConfig{
 			Dependencies: &config.ModuleDependencies{Paths: []string{"../module-f"}},
-			Terraform:    &config.TerraformConfig{Source: "test"},
+			Terraform:    &config.TerraformConfig{Source: ptr("test")},
+			IsPartial:    true,
 		},
 		TerragruntOptions: mockOptions.Clone(canonical(t, "../test/fixture-modules/module-g/"+config.DefaultTerragruntConfigPath)),
 	}
@@ -408,9 +424,9 @@ func TestResolveTerraformModulesMultipleModulesWithNestedExternalDependencies(t 
 	moduleH := &TerraformModule{
 		Path:                 canonical(t, "../test/fixture-modules/module-h"),
 		Dependencies:         []*TerraformModule{},
-		Config:               config.TerragruntConfig{},
+		Config:               config.TerragruntConfig{IsPartial: true},
 		TerragruntOptions:    mockOptions.Clone(canonical(t, "../test/fixture-modules/module-h/"+config.DefaultTerragruntConfigPath)),
-		AssumeAlreadyApplied: false,
+		AssumeAlreadyApplied: true,
 	}
 
 	moduleI := &TerraformModule{
@@ -418,9 +434,10 @@ func TestResolveTerraformModulesMultipleModulesWithNestedExternalDependencies(t 
 		Dependencies: []*TerraformModule{moduleH},
 		Config: config.TerragruntConfig{
 			Dependencies: &config.ModuleDependencies{Paths: []string{"../module-h"}},
+			IsPartial:    true,
 		},
 		TerragruntOptions:    mockOptions.Clone(canonical(t, "../test/fixture-modules/module-i/"+config.DefaultTerragruntConfigPath)),
-		AssumeAlreadyApplied: false,
+		AssumeAlreadyApplied: true,
 	}
 
 	moduleJ := &TerraformModule{
@@ -428,7 +445,8 @@ func TestResolveTerraformModulesMultipleModulesWithNestedExternalDependencies(t 
 		Dependencies: []*TerraformModule{moduleI},
 		Config: config.TerragruntConfig{
 			Dependencies: &config.ModuleDependencies{Paths: []string{"../module-i"}},
-			Terraform:    &config.TerraformConfig{Source: "temp"},
+			Terraform:    &config.TerraformConfig{Source: ptr("temp")},
+			IsPartial:    true,
 		},
 		TerragruntOptions: mockOptions.Clone(canonical(t, "../test/fixture-modules/module-j/"+config.DefaultTerragruntConfigPath)),
 	}
@@ -438,7 +456,8 @@ func TestResolveTerraformModulesMultipleModulesWithNestedExternalDependencies(t 
 		Dependencies: []*TerraformModule{moduleH},
 		Config: config.TerragruntConfig{
 			Dependencies: &config.ModuleDependencies{Paths: []string{"../module-h"}},
-			Terraform:    &config.TerraformConfig{Source: "fire"},
+			Terraform:    &config.TerraformConfig{Source: ptr("fire")},
+			IsPartial:    true,
 		},
 		TerragruntOptions: mockOptions.Clone(canonical(t, "../test/fixture-modules/module-k/"+config.DefaultTerragruntConfigPath)),
 	}
@@ -447,7 +466,7 @@ func TestResolveTerraformModulesMultipleModulesWithNestedExternalDependencies(t 
 	expected := []*TerraformModule{moduleH, moduleI, moduleJ, moduleK}
 
 	actualModules, actualErr := ResolveTerraformModules(configPaths, mockOptions, mockHowThesePathsWereFound)
-	assert.Nil(t, actualErr, "Unexpected error: %v", actualErr)
+	require.NoError(t, actualErr)
 	assertModuleListsEqual(t, expected, actualModules)
 }
 
@@ -457,13 +476,13 @@ func TestResolveTerraformModulesInvalidPaths(t *testing.T) {
 	configPaths := []string{"../test/fixture-modules/module-missing-dependency/" + config.DefaultTerragruntConfigPath}
 
 	_, actualErr := ResolveTerraformModules(configPaths, mockOptions, mockHowThesePathsWereFound)
-	if assert.NotNil(t, actualErr, "Unexpected error: %v", actualErr) {
-		underlying, ok := errors.Unwrap(actualErr).(ErrorProcessingModule)
-		if assert.True(t, ok) {
-			unwrapped := errors.Unwrap(underlying.UnderlyingError)
-			assert.True(t, os.IsNotExist(unwrapped), "Expected a file not exists error but got %v", underlying.UnderlyingError)
-		}
-	}
+	require.Error(t, actualErr)
+
+	underlying, ok := errors.Unwrap(actualErr).(ErrorProcessingModule)
+	require.True(t, ok)
+
+	unwrapped := errors.Unwrap(underlying.UnderlyingError)
+	assert.True(t, os.IsNotExist(unwrapped), "Expected a file not exists error but got %v", underlying.UnderlyingError)
 }
 
 func TestResolveTerraformModuleNoTerraformConfig(t *testing.T) {
@@ -498,16 +517,19 @@ func TestGetTerragruntSourceForModuleHappyPath(t *testing.T) {
 	}
 
 	for _, testCase := range testCases {
-		t.Run(fmt.Sprintf("%s-%s", testCase.config.Terraform.Source, testCase.opts.Source), func(t *testing.T) {
+		// The following is necessary to make sure testCase's values don't
+		// get updated due to concurrency within the scope of t.Run(..) below
+		testCase := testCase
+		t.Run(fmt.Sprintf("%v-%s", *testCase.config.Terraform.Source, testCase.opts.Source), func(t *testing.T) {
 			actual, err := getTerragruntSourceForModule("mock-for-test", testCase.config, testCase.opts)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			assert.Equal(t, testCase.expected, actual)
 		})
 	}
 }
 
 func mockOptionsWithSource(t *testing.T, sourceUrl string) *options.TerragruntOptions {
-	opts, err := options.NewTerragruntOptionsForTest("mock-for-test.tfvars")
+	opts, err := options.NewTerragruntOptionsForTest("mock-for-test.hcl")
 	if err != nil {
 		t.Fatalf("Error creating terragrunt options for test %v", err)
 	}
@@ -516,7 +538,11 @@ func mockOptionsWithSource(t *testing.T, sourceUrl string) *options.TerragruntOp
 }
 
 func mockConfigWithSource(sourceUrl string) *config.TerragruntConfig {
-	cfg := config.TerragruntConfig{}
-	cfg.Terraform = &config.TerraformConfig{Source: sourceUrl}
+	cfg := config.TerragruntConfig{IsPartial: true}
+	cfg.Terraform = &config.TerraformConfig{Source: &sourceUrl}
 	return &cfg
+}
+
+func ptr(str string) *string {
+	return &str
 }

@@ -234,7 +234,22 @@ func resolveTerraformModule(terragruntConfigPath string, terragruntOptions *opti
 	}
 
 	opts := terragruntOptions.Clone(terragruntConfigPath)
-	terragruntConfig, err := config.ParseConfigFile(terragruntConfigPath, opts, nil)
+	// We only partially parse the config, only using the pieces that we need in this section. This config will be fully
+	// parsed at a later stage right before the action is run. This is to delay interpolation of functions until right
+	// before we call out to terraform.
+	terragruntConfig, err := config.PartialParseConfigFile(
+		terragruntConfigPath,
+		opts,
+		nil,
+		[]config.PartialDecodeSectionType{
+			// Need for initializing the modules
+			config.TerraformBlock,
+
+			// Need for parsing out the dependencies
+			config.DependenciesBlock,
+			config.DependencyBlock,
+		},
+	)
 	if err != nil {
 		return nil, errors.WithStackTrace(ErrorProcessingModule{UnderlyingError: err, HowThisModuleWasFound: howThisModuleWasFound, ModulePath: terragruntConfigPath})
 	}
@@ -266,7 +281,7 @@ func resolveTerraformModule(terragruntConfigPath string, terragruntOptions *opti
 	if err != nil {
 		return nil, err
 	}
-	if (terragruntConfig.Terraform == nil || terragruntConfig.Terraform.Source == "") && matches == nil {
+	if (terragruntConfig.Terraform == nil || terragruntConfig.Terraform.Source == nil || *terragruntConfig.Terraform.Source == "") && matches == nil {
 		terragruntOptions.Logger.Printf("Module %s does not have an associated terraform configuration and will be skipped.", filepath.Dir(terragruntConfigPath))
 		return nil, nil
 	}
@@ -284,21 +299,21 @@ func resolveTerraformModule(terragruntConfigPath string, terragruntOptions *opti
 // Example:
 //
 // --terragrunt-source: /source/infrastructure-modules
-// source param in module's terraform.tfvars: git::git@github.com:acme/infrastructure-modules.git//networking/vpc?ref=v0.0.1
+// source param in module's terragrunt.hcl: git::git@github.com:acme/infrastructure-modules.git//networking/vpc?ref=v0.0.1
 //
 // This method will return: /source/infrastructure-modules//networking/vpc
 //
 func getTerragruntSourceForModule(modulePath string, moduleTerragruntConfig *config.TerragruntConfig, terragruntOptions *options.TerragruntOptions) (string, error) {
-	if terragruntOptions.Source == "" || moduleTerragruntConfig.Terraform == nil || moduleTerragruntConfig.Terraform.Source == "" {
+	if terragruntOptions.Source == "" || moduleTerragruntConfig.Terraform == nil || moduleTerragruntConfig.Terraform.Source == nil || *moduleTerragruntConfig.Terraform.Source == "" {
 		return "", nil
 	}
 
 	// use go-getter to split the module source string into a valid URL and subdirectory (if // is present)
-	moduleUrl, moduleSubdir := getter.SourceDirSubdir(moduleTerragruntConfig.Terraform.Source)
+	moduleUrl, moduleSubdir := getter.SourceDirSubdir(*moduleTerragruntConfig.Terraform.Source)
 
 	// if both URL and subdir are missing, something went terribly wrong
 	if moduleUrl == "" && moduleSubdir == "" {
-		return "", errors.WithStackTrace(InvalidSourceUrl{ModulePath: modulePath, ModuleSourceUrl: moduleTerragruntConfig.Terraform.Source, TerragruntSource: terragruntOptions.Source})
+		return "", errors.WithStackTrace(InvalidSourceUrl{ModulePath: modulePath, ModuleSourceUrl: *moduleTerragruntConfig.Terraform.Source, TerragruntSource: terragruntOptions.Source})
 	}
 	// if only subdir is missing, check if we can obtain a valid module name from the URL portion
 	if moduleUrl != "" && moduleSubdir == "" {
@@ -417,8 +432,18 @@ func resolveExternalDependenciesForModule(module *TerraformModule, moduleMap map
 }
 
 // Confirm with the user whether they want Terragrunt to assume the given dependency of the given module is already
-// applied. If the user selects "no", then Terragrunt will apply that module as well.
+// applied. If the user selects "yes", then Terragrunt will apply that module as well.
 func confirmShouldApplyExternalDependency(module *TerraformModule, dependency *TerraformModule, terragruntOptions *options.TerragruntOptions) (bool, error) {
+	if terragruntOptions.IncludeExternalDependencies {
+		terragruntOptions.Logger.Printf("The --terragrunt-include-external-dependencies flag is set, so automatically including all external dependencies, and will run this command against module %s, which is a dependency of module %s.", dependency.Path, module.Path)
+		return true, nil
+	}
+
+	if terragruntOptions.NonInteractive {
+		terragruntOptions.Logger.Printf("The --non-interactive flag is set. To avoid accidentally affecting external dependencies with an xxx-all command, will not run this command against module %s, which is a dependency of module %s.", dependency.Path, module.Path)
+		return false, nil
+	}
+
 	prompt := fmt.Sprintf("Module %s depends on module %s, which is an external dependency outside of the current working directory. Should Terragrunt run this external dependency? Warning, if you say 'yes', Terragrunt will make changes in %s as well!", module.Path, dependency.Path, dependency.Path)
 	return shell.PromptUserForYesNo(prompt, terragruntOptions)
 }

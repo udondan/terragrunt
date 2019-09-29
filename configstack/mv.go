@@ -13,6 +13,7 @@ import (
 )
 
 const tmpStatefileName = "terragrunt-mv-tmp.tfstate"
+const moveManifestName = ".terragrunt-mv-manifest"
 
 // MvAll moves a local directory/tree and the related statefiles to the matching remote location
 func MvAll(terragruntOptions *options.TerragruntOptions) error {
@@ -32,7 +33,7 @@ func MvAll(terragruntOptions *options.TerragruntOptions) error {
 		return err
 	}
 
-	if err := util.CopyFolderContents(terragruntOptions.WorkingDir, terragruntOptionsTarget.WorkingDir, false); err != nil {
+	if err := util.CopyFolderContents(terragruntOptions.WorkingDir, terragruntOptionsTarget.WorkingDir, moveManifestName, false); err != nil {
 		return err
 	}
 
